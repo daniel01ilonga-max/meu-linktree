@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeton | Plataforma de Investimentos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <style>
+        :root {
+            --bg-dark: #121822; --bg-glass: rgba(32, 42, 59, 0.7); --bg-card: rgba(32, 42, 59, 0.5);
+            --border-color: rgba(51, 65, 85, 0.7); --text-primary: #f1f5f9; --text-secondary: #94a3b8;
+            --accent-neon: #0ef; --accent-green: #22c55e; --accent-yellow: #facc15;
+            --danger: #ef4444; --success: #4ade80;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-primary); font-size: 16px; overflow: hidden; height: 100vh; width: 100vw; }
+
+        /* --- Seção de Autenticação --- */
+        #auth-wrapper { display: none; justify-content: center; align-items: center; width: 100%; height: 100%; background: linear-gradient(-45deg, #0f0c29, #121822, #16213e, #0f0c29); background-size: 400% 400%; animation: gradientAnimation 15s ease infinite; }
+        @keyframes gradientAnimation { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        .auth-container { position: relative; width: 420px; background: var(--bg-glass); border: 1px solid var(--border-color); backdrop-filter: blur(10px); box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); border-radius: 1rem; padding: 40px; height: 520px; transition: height 0.5s ease-in-out; overflow: hidden; }
+        .auth-container.active { height: 590px; }
+        .form-box { width: 100%; position: absolute; top: 0; left: 0; padding: 40px; transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+        .form-box.login { transform: translateX(0); } .form-box.register { transform: translateX(110%); }
+        .auth-container.active .form-box.login { transform: translateX(-110%); } .auth-container.active .form-box.register { transform: translateX(0); }
+        .form-box h1 { font-size: 2.25rem; text-align: center; margin-bottom: 2rem; font-weight: 700; }
+        .input-box { position: relative; width: 100%; height: 50px; margin: 1.5rem 0; }
+        .input-box input { width: 100%; height: 100%; background: transparent; border: 1px solid var(--border-color); border-radius: 25px; font-size: 1rem; color: var(--text-primary); padding: 0 45px 0 20px; }
+        .input-box i { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
+        .options { display: flex; justify-content: space-between; font-size: 0.9rem; margin: -0.5rem 0 1.5rem; }
+        .options a { color: var(--accent-neon); } .btn { width: 100%; height: 45px; background: var(--accent-neon); border: none; border-radius: 25px; cursor: pointer; font-size: 1rem; color: #121822; font-weight: 600; }
+        .btn:disabled { background-color: #555; color: #aaa; cursor: not-allowed; }
+        .login-register { font-size: 0.9rem; text-align: center; margin-top: 1.5rem; }
+        .login-register a { color: var(--accent-neon); font-weight: 600; } .message { text-align: center; font-weight: 500; margin-top: 1rem; font-size: 0.9rem; display: none; }
+        .message.error { color: var(--danger); } .message.success { color: var(--success); }
+
+        /* --- Estrutura Principal do Dashboard --- */
+        #dashboard-wrapper { width: 100%; max-width: 480px; height: 100vh; margin: 0 auto; display: none; flex-direction: column; overflow: hidden; position: relative; background-color: var(--bg-dark); }
+        .dash-header { padding: 1rem; text-align: center; background: var(--bg-card); border-bottom: 1px solid var(--border-color); flex-shrink: 0; z-index: 5; position: relative;}
+        .dash-header h1 { font-size: 1.2rem; }
+        main { flex-grow: 1; overflow: hidden; position: relative; }
+        .page-content { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto; padding: 1rem; padding-bottom: 80px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; z-index: 1; }
+        .page-content.active { opacity: 1; visibility: visible; z-index: 2; }
+        .page-content::-webkit-scrollbar { display: none; }
+
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; }
+        .card h3 { margin-bottom: 1rem; font-size: 1.1rem; }
+        .user-card { display: flex; align-items: center; gap: 1rem; }
+        .user-card .logo { font-size: 2rem; color: var(--accent-neon); background: rgba(0, 238, 255, 0.1); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .user-info h3 { font-size: 1.1rem; margin: 0; } .user-info p { font-size: 0.9rem; color: var(--text-secondary); }
+        .balance-card .balances { display: flex; justify-content: space-around; text-align: center; margin-bottom: 1rem; }
+        .balance-card h4 { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem;}
+        .balance-card p { font-size: 1.5rem; font-weight: 600; color: var(--accent-yellow); }
+        .balance-buttons { display: flex; gap: 1rem; }
+        .balance-buttons button { flex: 1; padding: 0.8rem; border-radius: 0.5rem; font-weight: 600; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; transition: transform 0.2s ease; border: none; }
+        .btn-recarregar { background: var(--accent-neon); color: var(--bg-dark); }
+        .btn-sacar { background: var(--accent-yellow); color: var(--bg-dark); }
+        .actions-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; }
+        .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; }
+        .action-item { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; cursor: pointer; }
+        .action-item .icon-bg { width: 50px; height: 50px; background: var(--bg-dark); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--accent-neon); }
+        .action-item span { font-size: 0.8rem; color: var(--text-secondary); }
+        .btn-logout { width: 100%; padding: 0.8rem; margin-top: 1rem; background-color: var(--danger); color: var(--text-primary); border: none; border-radius: 0.5rem; font-weight: 600; font-size: 1rem; cursor: pointer; }
+
+        .investment-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+        .investment-card .card-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
+        .investment-card .card-header h3 { margin: 0; font-size: 1.2rem; color: var(--accent-neon); }
+        .investment-card .price { font-size: 1.3rem; font-weight: 700; color: var(--accent-yellow); }
+        .investment-card .card-body { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .investment-card .stat-item { display: flex; flex-direction: column; }
+        .investment-card .stat-item span { font-size: 0.8rem; color: var(--text-secondary); }
+        .investment-card .stat-item strong { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+        .investment-card .btn-comprar { width: 100%; padding: 0.8rem; background: var(--accent-neon); color: var(--bg-dark); border: none; border-radius: 0.5rem; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background-color 0.3s ease; }
+        
+        .btn-back { position: absolute; top: 1rem; left: 1rem; background: none; border: none; color: var(--text-primary); font-size: 1.5rem; cursor: pointer; z-index: 10; }
+        .transaction-page .amount-input { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 1.2rem; text-align: left; font-weight: 500; padding: 0.8rem; margin-bottom: 1rem; border-radius: 0.5rem; }
+        .transaction-page .amount-input:focus { outline: none; border-color: var(--accent-neon); }
+        .transaction-page .info-text { font-size: 0.8rem; color: var(--text-secondary); text-align: center; margin-top: 1rem; }
+        .transaction-page .btn-confirm { width: 100%; padding: 1rem; background: var(--accent-green); color: var(--bg-dark); border: none; border-radius: 0.5rem; font-weight: 600; font-size: 1.1rem; cursor: pointer; margin-top: 1rem; }
+        .transaction-page .btn-confirm:disabled { background: var(--border-color); color: var(--text-secondary); cursor: not-allowed; }
+
+        .preset-amounts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.75rem; }
+        .preset-btn { background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.75rem; border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s ease; }
+        .preset-btn.selected { background: var(--accent-neon); color: var(--bg-dark); border-color: var(--accent-neon); }
+        .payment-methods-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+        .payment-method-btn { background: none; border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.75rem; border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s ease; }
+        .payment-method-btn.active { background: var(--accent-green); color: var(--bg-dark); border-color: var(--accent-green); }
+        .iban-details-card { background: var(--bg-dark); padding: 1rem; border-radius: 0.75rem; }
+        .iban-details-card p { margin-bottom: 0.5rem; }
+        .iban-info { display: flex; justify-content: space-between; align-items: center; }
+        .iban-info span { font-size: 1.1rem; font-weight: 600; color: var(--accent-neon); word-break: break-all; }
+        .btn-copy-iban { background: var(--accent-neon); color: var(--bg-dark); border: none; padding: 0.5rem 0.8rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; flex-shrink: 0; margin-left: 1rem;}
+        .file-upload-wrapper { display: flex; align-items: center; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.5rem; }
+        .file-upload-label { background: var(--text-secondary); color: var(--bg-dark); padding: 0.3rem 0.8rem; border-radius: 0.25rem; cursor: pointer; white-space: nowrap; }
+        .file-name-display { color: var(--text-secondary); margin-left: 0.8rem; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        input[type="file"] { display: none; }
+        .withdrawal-info { margin-top: 1rem; padding: 1rem; background: var(--bg-dark); border-radius: 0.5rem; font-size: 0.9rem; }
+        .withdrawal-info h4 { font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-primary); }
+        .withdrawal-info p { color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .withdrawal-info p strong { color: var(--text-primary); }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; }
+        .form-group input { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.8rem; color: var(--text-primary); font-size: 1rem; }
+        .referral-card { text-align: center; }
+        .referral-link-box { background: var(--bg-dark); border: 1px dashed var(--border-color); border-radius: 0.5rem; padding: 1rem; margin: 1rem 0; font-size: 1.1rem; font-weight: 600; color: var(--accent-yellow); }
+        .history-tabs { display: flex; gap: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
+        .history-tab { background: none; border: none; color: var(--text-secondary); padding: 0.5rem 0; font-size: 1rem; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; }
+        .history-tab.active { color: var(--accent-neon); border-bottom-color: var(--accent-neon); }
+        .history-list { display: none; } .history-list.active { display: block; }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color); }
+        .history-item:last-child { border-bottom: none; }
+        .history-details p { font-size: 1rem; font-weight: 500; }
+        .history-details span { font-size: 0.8rem; color: var(--text-secondary); }
+        .history-status .status { font-weight: 600; font-size: 0.9rem; }
+        .status.approved { color: var(--success); } .status.pending { color: var(--accent-yellow); } .status.refused { color: var(--danger); }
+
+        /* --- ESTILOS PARA MODAIS (POP-UP) --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: var(--bg-card); padding: 2rem; border-radius: 1rem; border: 1px solid var(--border-color); width: 90%; max-width: 400px; text-align: center; }
+        .modal-content h3 { margin-top: 0; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .modal-content p { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+        .modal-content .form-group { text-align: left; }
+        .modal-buttons { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        .modal-buttons button, .modal-buttons a { flex: 1; padding: 0.8rem; text-decoration: none; display: flex; justify-content: center; align-items: center; font-weight: 600; border-radius: 0.5rem; }
+        .btn-cancel { background: var(--border-color); color: var(--text-primary); border: none; }
+        
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; max-width: 480px; margin: 0 auto; background: rgba(32, 42, 59, 0.8); backdrop-filter: blur(10px); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 0.5rem 0; z-index: 10; flex-shrink: 0;}
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; color: var(--text-secondary); font-size: 0.75rem; cursor: pointer; border: none; background: none; }
+        .nav-item i { font-size: 1.5rem; }
+        .nav-item.active { color: var(--accent-neon); }
+    </style>
+</head>
+<body>
+
+    <!-- ======== SEÇÃO DE AUTENTICAÇÃO ======== -->
+    <div id="auth-wrapper">
+        <div class="auth-container">
+            <div class="form-box login"><form id="loginForm"><h1>Login</h1><div class="input-box"><input type="email" name="email" placeholder="E-mail" required><i class='bx bxs-envelope'></i></div><div class="input-box"><input type="password" name="password" placeholder="Senha" required><i class='bx bxs-lock-alt'></i></div><div class="options"><label><input type="checkbox"> Lembrar-me</label><a href="#">Esqueceu a senha?</a></div><button type="submit" class="btn" id="loginBtn">Acessar</button><div class="login-register"><p>Não tem uma conta? <a href="#" class="register-link">Cadastre-se</a></p></div><p id="loginMessage" class="message"></p></form></div>
+            <div class="form-box register"><form id="registerForm"><h1>Cadastro</h1><div class="input-box"><input type="text" name="username" placeholder="Nome de Usuário" required><i class='bx bxs-user'></i></div><div class="input-box"><input type="email" name="email" placeholder="E-mail" required><i class='bx bxs-envelope'></i></div><div class="input-box"><input type="password" name="password" placeholder="Senha (mínimo 6 caracteres)" minlength="6" required><i class='bx bxs-lock-alt'></i></div><div class="options"><label><input type="checkbox" name="terms" required> Concordo com os termos</label></div><button type="submit" class="btn" id="registerBtn">Cadastrar</button><div class="login-register"><p>Já tem uma conta? <a href="#" class="login-link">Login</a></p></div><p id="registerMessage" class="message"></p></form></div>
+        </div>
+    </div>
+
+    <!-- ======== SEÇÃO DO DASHBOARD ======== -->
+    <div id="dashboard-wrapper">
+        <header class="dash-header"><h1 id="header-title"></h1></header>
+        <main>
+            <!-- PÁGINA INICIAL -->
+            <div id="page-inicial" class="page-content">
+                <section class="card"><h3>Bem-vindo, <b id="welcome-username">...</b>!</h3><p class="text-secondary">Acompanhe seus investimentos hoje.</p></section>
+                <section class="card balance-card"><div class="balances"><div><h4>Saldo Total</h4><p>Kz 0.00</p></div><div><h4>Lucro Hoje</h4><p class="text-secondary" style="font-size: 1.2rem; animation: none;">+ Kz 0.00</p></div></div></section>
+                <section class="card"><h3>Crescimento do Portfólio</h3><div id="home-chart"></div></section>
+            </div>
+
+            <!-- PÁGINA INVESTIR -->
+            <div id="page-investir" class="page-content">
+                <div class="investment-card"><div class="card-header"><h3>VIP 1</h3><span class="price">Kz 7.500</span></div><div class="card-body"><div class="stat-item"><span>Renda Diária</span><strong>Kz 400</strong></div><div class="stat-item"><span>Renda Total</span><strong>Kz 146.000</strong></div><div class="stat-item"><span>Ciclo</span><strong>365 Dias</strong></div></div><button class="btn-comprar">Comprar Agora</button></div>
+                <div class="investment-card"><div class="card-header"><h3>VIP 2</h3><span class="price">Kz 33.000</span></div><div class="card-body"><div class="stat-item"><span>Renda Diária</span><strong>Kz 1.500</strong></div><div class="stat-item"><span>Renda Total</span><strong>Kz 547.500</strong></div><div class="stat-item"><span>Ciclo</span><strong>365 Dias</strong></div></div><button class="btn-comprar">Comprar Agora</button></div>
+                <div class="investment-card"><div class="card-header"><h3>VIP 3</h3><span class="price">Kz 89.000</span></div><div class="card-body"><div class="stat-item"><span>Renda Diária</span><strong>Kz 5.000</strong></div><div class="stat-item"><span>Renda Total</span><strong>Kz 1.825.000</strong></div><div class="stat-item"><span>Ciclo</span><strong>365 Dias</strong></div></div><button class="btn-comprar">Comprar Agora</button></div>
+                <div class="investment-card"><div class="card-header"><h3>VIP 4</h3><span class="price">Kz 210.000</span></div><div class="card-body"><div class="stat-item"><span>Renda Diária</span><strong>Kz 15.000</strong></div><div class="stat-item"><span>Renda Total</span><strong>Kz 5.475.000</strong></div><div class="stat-item"><span>Ciclo</span><strong>365 Dias</strong></div></div><button class="btn-comprar">Comprar Agora</button></div>
+                <div class="investment-card"><div class="card-header"><h3>VIP 5</h3><span class="price">Kz 470.000</span></div><div class="card-body"><div class="stat-item"><span>Renda Diária</span><strong>Kz 30.000</strong></div><div class="stat-item"><span>Renda Total</span><strong>Kz 10.950.000</strong></div><div class="stat-item"><span>Ciclo</span><strong>365 Dias</strong></div></div><button class="btn-comprar">Comprar Agora</button></div>
+                <div class="investment-card"><div class="card-header"><h3>VIP 6</h3><span class="price">Kz 990.000</span></div><div class="card-body"><div class="stat-item"><span>Renda Diária</span><strong>Kz 60.000</strong></div><div class="stat-item"><span>Renda Total</span><strong>Kz 21.900.000</strong></div><div class="stat-item"><span>Ciclo</span><strong>365 Dias</strong></div></div><button class="btn-comprar">Comprar Agora</button></div>
+                <div class="investment-card"><div class="card-header"><h3>VIP 7</h3><span class="price">Kz 2.500.000</span></div><div class="card-body"><div class="stat-item"><span>Renda Diária</span><strong>Kz 200.000</strong></div><div class="stat-item"><span>Renda Total</span><strong>Kz 73.000.000</strong></div><div class="stat-item"><span>Ciclo</span><strong>365 Dias</strong></div></div><button class="btn-comprar">Comprar Agora</button></div>
+            </div>
+
+            <!-- PÁGINA CONTA -->
+            <div id="page-conta" class="page-content">
+                <section class="card user-card"><div class="logo"><i class='bx bx-pulse'></i></div><div class="user-info"><h3 id="dash-username">...</h3><p id="dash-userid">ID: ...</p></div></section>
+                <section class="card balance-card"><div class="balances"><div><h4>Saldo Total</h4><p>Kz 0.00</p></div><div><h4>Saldo para Saque</h4><p>Kz 0.00</p></div></div><div class="balance-buttons"><button id="btn-go-to-recarregar" class="btn-recarregar"><i class='bx bx-credit-card-front'></i> Recarregar</button><button id="btn-go-to-sacar" class="btn-sacar"><i class='bx bx-money-withdraw'></i> Sacar</button></div></section>
+                <section class="card"><div class="actions-grid">
+                    <div id="action-pedidos" class="action-item"><div class="icon-bg"><i class='bx bx-archive'></i></div><span>Pedidos</span></div>
+                    <div id="action-equipa" class="action-item"><div class="icon-bg"><i class='bx bx-group'></i></div><span>Equipe</span></div>
+                    <div id="action-cartao" class="action-item"><div class="icon-bg"><i class='bx bx-credit-card'></i></div><span>Cartão</span></div>
+                </div></section>
+                <section class="card services-card"><h3>Mais Serviços</h3><div class="services-grid"><div class="action-item"><div class="icon-bg"><i class='bx bx-help-circle'></i></div><span>Ajuda</span></div><div class="action-item"><div class="icon-bg"><i class='bx bx-info-circle'></i></div><span>Sobre</span></div><div class="action-item"><div class="icon-bg"><i class='bx bxl-telegram'></i></div><span>Telegram</span></div></div><button id="logout-btn" class="btn-logout">Sair da Conta</button></section>
+            </div>
+
+            <!-- PÁGINA DE RECARGA - ETAPA 1 -->
+            <div id="page-recarregar-valores" class="page-content transaction-page">
+                <button class="btn-back" data-target="conta"><i class='bx bx-arrow-back'></i></button>
+                <section class="card">
+                    <h3>Escolha o Valor da Recarga</h3>
+                    <div class="preset-amounts-grid">
+                        <button class="preset-btn" data-amount="7500">7.500 Kz</button>
+                        <button class="preset-btn" data-amount="33000">33.000 Kz</button>
+                        <button class="preset-btn" data-amount="89000">89.000 Kz</button>
+                        <button class="preset-btn" data-amount="210000">210.000 Kz</button>
+                        <button class="preset-btn" data-amount="470000">470.000 Kz</button>
+                        <button class="preset-btn" data-amount="990000">990.000 Kz</button>
+                        <button class="preset-btn" data-amount="2500000">2.500.000 Kz</button>
+                    </div>
+                </section>
+                <button id="btn-proceed-to-deposit" class="btn-confirm" disabled>Prosseguir</button>
+            </div>
+
+            <!-- PÁGINA DE RECARGA - ETAPA 2 -->
+            <div id="page-recarregar-deposito" class="page-content transaction-page">
+                <button class="btn-back" data-target="recarregar-valores"><i class='bx bx-arrow-back'></i></button>
+                <div class="payment-methods-grid">
+                    <button class="payment-method-btn active" data-bank="BAI">BAI</button>
+                    <button class="payment-method-btn" data-bank="Atlântico">Atlântico</button>
+                    <button class="payment-method-btn" data-bank="NÚMERO EXPRESS">NÚMERO EXPRESS</button>
+                    <button class="payment-method-btn" data-bank="BFA">BFA</button>
+                </div>
+                <div class="card iban-details-card">
+                    <div class="iban-info">
+                        <p><span id="deposit-label"></span>:<br><span id="iban-to-copy"></span></p>
+                        <button id="btn-copy-iban" class="btn-copy-iban">Copiar</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Preencha os dados do seu depósito</h3>
+                    <label for="deposit-value">Valor do Depósito:</label>
+                    <input type="text" id="deposit-value" class="amount-input" readonly>
+                    <label for="payment-proof">Comprovativo de Pagamento:</label>
+                    <div class="file-upload-wrapper">
+                        <label for="payment-proof" class="file-upload-label">Escolher arquivo</label>
+                        <span id="file-name" class="file-name-display">Nenhum escolhido</span>
+                        <input type="file" id="payment-proof" accept="image/*,application/pdf">
+                    </div>
+                    <button class="btn-confirm">Enviar Comprovativo</button>
+                    <p class="info-text" style="text-transform: uppercase; font-weight: 500; margin-top: 1.5rem; line-height: 1.5;">
+                        Horário de depósito das 08:00 até 20:00 de Segunda a Sábado. Duração de aprovação 10 a 20 minutos.
+                    </p>
+                </div>
+            </div>
+
+            <!-- PÁGINA DE SAQUE -->
+            <div id="page-sacar" class="page-content transaction-page">
+                <button class="btn-back" data-target="conta"><i class='bx bx-arrow-back'></i></button>
+                <section class="card"><p class="text-secondary">Saldo Disponível para Saque</p><p style="font-size: 1.8rem; font-weight: 600; color: var(--accent-yellow);">Kz 0.00</p></section>
+                <section class="card">
+                    <h3>Valor do Saque</h3>
+                    <input type="number" class="amount-input" placeholder="0,00">
+                    <div class="withdrawal-info">
+                        <h4>Informações de Saque</h4>
+                        <p><strong>Taxa de saque:</strong> 10%</p>
+                        <p><strong>Saque mínimo:</strong> 3.500 Kz</p>
+                        <p><strong>Horário de saque:</strong> 08:00h até 19:00h</p>
+                    </div>
+                </section>
+                <button class="btn-confirm">Confirmar Saque</button>
+            </div>
+
+            <!-- PÁGINA: CARTÃO BANCÁRIO -->
+            <div id="page-cartao" class="page-content transaction-page">
+                <button class="btn-back" data-target="conta"><i class='bx bx-arrow-back'></i></button>
+                <section class="card">
+                    <h3>Cadastrar Cartão Bancário</h3>
+                    <p class="text-secondary" style="margin-bottom: 1rem;">Adicione os seus dados bancários para poder efetuar saques.</p>
+                    <form id="bank-card-form">
+                        <div class="form-group"><label for="card-holder-name">Nome do Titular</label><input type="text" id="card-holder-name" placeholder="Insira o nome completo" required></div>
+                        <div class="form-group"><label for="bank-name">Nome do Banco</label><input type="text" id="bank-name" placeholder="Ex: Banco BAI" required></div>
+                        <div class="form-group"><label for="card-iban">IBAN</label><input type="text" id="card-iban" placeholder="Insira o seu IBAN" required></div>
+                        <button type="submit" class="btn-confirm">Salvar Cartão</button>
+                    </form>
+                </section>
+            </div>
+
+            <!-- PÁGINA: EQUIPA -->
+            <div id="page-equipa" class="page-content">
+                <button class="btn-back" data-target="conta"><i class='bx bx-arrow-back'></i></button>
+                <section class="card referral-card">
+                    <h3>Convide Amigos, Ganhe Comissões</h3>
+                    <p class="text-secondary">Partilhe o seu link de convite e ganhe uma percentagem sobre os investimentos da sua equipe.</p>
+                    <div class="referral-link-box" id="referral-link">https://jeton.ao/invite?ref=...</div>
+                    <button id="btn-copy-link" class="btn-confirm" style="margin-top: 0;">Copiar Link</button>
+                </section>
+                <section class="card">
+                    <h3>Estatísticas da Equipe</h3>
+                    <div class="balance-card" style="padding: 0;"><div class="balances">
+                        <div><h4>Membros</h4><p style="color: var(--text-primary);">0</p></div>
+                        <div><h4>Comissão Total</h4><p>Kz 0.00</p></div>
+                    </div></div>
+                </section>
+            </div>
+
+            <!-- PÁGINA: PEDIDOS -->
+            <div id="page-pedidos" class="page-content">
+                <button class="btn-back" data-target="conta"><i class='bx bx-arrow-back'></i></button>
+                <div class="history-tabs">
+                    <button class="history-tab active" data-target="deposits-list">Depósitos</button>
+                    <button class="history-tab" data-target="withdrawals-list">Retiradas</button>
+                </div>
+                <div id="deposits-list" class="history-list active">
+                    <div class="history-item"><div class="history-details"><p>Depósito via BAI</p><span>15 Ago, 2025</span></div><div class="history-status"><p>+ 7.500 Kz</p><span class="status approved">Aprovado</span></div></div>
+                </div>
+                <div id="withdrawals-list" class="history-list">
+                    <div class="history-item"><div class="history-details"><p>Retirada para BAI</p><span>14 Ago, 2025</span></div><div class="history-status"><p>- 5.000 Kz</p><span class="status pending">Pendente</span></div></div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="bottom-nav">
+            <button data-page="inicial" class="nav-item active"><i class='bx bxs-home-alt-2'></i><span>Início</span></button>
+            <button data-page="investir" class="nav-item"><i class='bx bxs-bar-chart-alt-2'></i><span>Investir</span></button>
+            <button data-page="conta" class="nav-item"><i class='bx bxs-user-circle'></i><span>Conta</span></button>
+        </footer>
+    </div>
+    
+    <div id="telegram-notification-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3><i class='bx bxl-telegram' style="color: #2AABEE;"></i> Junte-se à Comunidade!</h3>
+            <p>Fique por dentro de todas as novidades, dicas e suporte exclusivo. Entre no nosso grupo oficial do Telegram!</p>
+            <div class="modal-buttons" style="flex-direction: column; gap: 0.5rem;">
+                <a href="https://t.me/Jeton_wallet_busines" target="_blank" class="btn btn-confirm" style="background: #2AABEE;">Entrar no Grupo</a>
+                <button type="button" id="btn-close-telegram-modal" class="btn btn-cancel">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- SDKs do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const firebaseConfig = {
+                apiKey: "AIzaSyB5mh3y9zB0KnxU2W57DuslSExm6GujEVA",
+                authDomain: "jeton-d1250.firebaseapp.com",
+                databaseURL: "https://jeton-d1250-default-rtdb.firebaseio.com",
+                projectId: "jeton-d1250",
+                storageBucket: "jeton-d1250.appspot.com",
+                messagingSenderId: "79409003148",
+                appId: "1:79409003148:web:d69ac4ff97da892a11d9a9"
+            };
+            firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+
+            const authWrapper = document.getElementById('auth-wrapper');
+            const dashboardWrapper = document.getElementById('dashboard-wrapper');
+            const headerTitle = document.getElementById('header-title');
+            
+            let isDailyIncomeCheckRunning = false;
+            let selectedDepositAmount = 0;
+
+            const bankDetails = {
+                'BAI': { label: 'IBAN', value: '0040.0000.4981.5618.1017.0' },
+                'Atlântico': { label: 'IBAN', value: 'Indisponível de momento' },
+                'NÚMERO EXPRESS': { label: 'Número Express', value: '974083486' },
+                'BFA': { label: 'IBAN', value: '0006.0000.7091.5160.3012.1' }
+            };
+
+            const TELEGRAM_BOT_TOKEN = "8286126472:AAFUdIUNF6Nt_we_heqVe6jH8Cd3vr3UIjk";
+            const TELEGRAM_CHAT_ID = "7421481757";
+
+            async function sendTelegramNotification(message) {
+                 const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+                try { await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'HTML' }) }); } catch (error) { console.error("Erro ao notificar Telegram:", error); }
+            }
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    authWrapper.style.display = 'none';
+                    dashboardWrapper.style.display = 'flex';
+                    fetchUserData(user);
+                    const navigateTo = setupNavigation();
+                    
+                    // --- CHAMADAS DAS FUNÇÕES DE CONFIGURAÇÃO ---
+                    renderHomeChart();
+                    setupRechargeFlow(navigateTo);
+                    setupWithdrawalLogic(user); // <-- FUNÇÃO DE SAQUE ADICIONADA AQUI
+                    setupHistoryTabs();
+                    setupTeamPage();
+                    setupInvestmentButtons(user);
+                    setupTelegramNotification();
+
+                    document.getElementById('telegram-notification-modal').classList.add('active');
+                } else {
+                    authWrapper.style.display = 'flex';
+                    dashboardWrapper.style.display = 'none';
+                }
+            });
+            
+            function fetchUserData(user) {
+                const userDocRef = db.collection('users').doc(user.uid);
+                
+                userDocRef.onSnapshot(doc => {
+                    if (doc.exists) {
+                        if (!isDailyIncomeCheckRunning) {
+                             isDailyIncomeCheckRunning = true;
+                            db.runTransaction(async (transaction) => {
+                                const freshDoc = await transaction.get(userDocRef); if (!freshDoc.exists) return;
+                                const data = freshDoc.data();
+                                const rendasDiarias = { 1: 400, 2: 1500, 3: 5000, 4: 15000, 5: 30000, 6: 60000, 7: 200000 };
+                                if (data.nivelVip > 0 && rendasDiarias[data.nivelVip]) {
+                                    const hoje = new Date(); const ultimaColeta = data.ultimaColetaDeRenda.toDate();
+                                    const hojeSemHoras = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+                                    const ultimaColetaSemHoras = new Date(ultimaColeta.getFullYear(), ultimaColeta.getMonth(), ultimaColeta.getDate());
+                                    const diffDays = Math.floor((hojeSemHoras - ultimaColetaSemHoras) / (1000 * 60 * 60 * 24));
+                                    if (diffDays > 0) {
+                                        const lucroCalculado = diffDays * rendasDiarias[data.nivelVip];
+                                        transaction.update(userDocRef, {
+                                            saldoTotal: (data.saldoTotal || 0) + lucroCalculado,
+                                            saldoSaque: (data.saldoSaque || 0) + lucroCalculado,
+                                            ultimaColetaDeRenda: new Date()
+                                        });
+                                    }
+                                }
+                            }).catch(error => console.error("Erro na transação de renda:", error)).finally(() => { isDailyIncomeCheckRunning = false; });
+                        }
+                        
+                        const data = doc.data();
+                        const formatCurrency = (value) => `Kz ${Number(value || 0).toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        
+                        const username = data.username || 'Novo Usuário';
+                        document.getElementById('welcome-username').textContent = username;
+                        document.getElementById('dash-username').textContent = username;
+                        document.getElementById('dash-userid').textContent = `ID: ${user.uid.substring(0, 8)}`;
+                        document.getElementById('referral-link').textContent = `https://jeton.ao/invite?ref=${user.uid}`;
+                        document.querySelector('#page-inicial .balance-card .balances p').textContent = formatCurrency(data.saldoTotal);
+                        const saldosConta = document.querySelectorAll('#page-conta .balance-card .balances p');
+                        saldosConta[0].textContent = formatCurrency(data.saldoTotal); 
+                        saldosConta[1].textContent = formatCurrency(data.saldoSaque);
+                        document.querySelector('#page-sacar .card p:last-child').textContent = formatCurrency(data.saldoSaque);
+
+                        const rendasDiarias = { 1: 400, 2: 1500, 3: 5000, 4: 15000, 5: 30000, 6: 60000, 7: 200000 };
+                        const lucroHojeEl = document.querySelector('#page-inicial .balance-card .balances .text-secondary');
+                        if (lucroHojeEl) {
+                             const rendaDoDia = (data.nivelVip > 0 && rendasDiarias[data.nivelVip]) ? rendasDiarias[data.nivelVip] : 0;
+                             lucroHojeEl.textContent = `+ ${formatCurrency(rendaDoDia)}`;
+                        }
+
+                    } else { console.error("Documento do usuário não encontrado!"); }
+                }, error => { console.error("Erro ao buscar dados do usuário: ", error); });
+            }
+
+            function setupNavigation() {
+                const navItems = document.querySelectorAll('.nav-item');
+                const pages = document.querySelectorAll('.page-content');
+                const pageTitles = { 'inicial': 'Início', 'investir': 'Planos de Investimento', 'conta': 'Minha Conta', 'recarregar-valores': 'Escolha o Valor', 'recarregar-deposito': 'Detalhes do Depósito', 'sacar': 'Sacar Saldo', 'cartao': 'Cartão Bancário', 'equipa': 'Minha Equipe', 'pedidos': 'Histórico de Pedidos' };
+                
+                function navigateTo(pageId) {
+                    pages.forEach(p => p.classList.remove('active'));
+                    const targetPage = document.getElementById(`page-${pageId}`);
+                    if (targetPage) targetPage.classList.add('active');
+                    const mainPages = ['inicial', 'investir', 'conta'];
+                    if (mainPages.includes(pageId)) {
+                        navItems.forEach(item => item.classList.toggle('active', item.dataset.page === pageId));
+                    }
+                    headerTitle.textContent = pageTitles[pageId] || 'Jeton';
+                }
+                
+                navItems.forEach(item => item.addEventListener('click', () => navigateTo(item.dataset.page)));
+                document.getElementById('btn-go-to-recarregar').addEventListener('click', () => navigateTo('recarregar-valores'));
+                document.getElementById('btn-go-to-sacar').addEventListener('click', () => navigateTo('sacar'));
+                document.querySelectorAll('.btn-back').forEach(button => button.addEventListener('click', () => navigateTo(button.dataset.target)));
+                document.getElementById('action-pedidos').addEventListener('click', () => navigateTo('pedidos'));
+                document.getElementById('action-equipa').addEventListener('click', () => navigateTo('equipa'));
+                document.getElementById('action-cartao').addEventListener('click', () => navigateTo('cartao'));
+
+                navigateTo('inicial');
+                return navigateTo;
+            }
+
+            // --- NOVA FUNÇÃO PARA A LÓGICA DE SAQUE ---
+            function setupWithdrawalLogic(user) {
+                const withdrawalPage = document.getElementById('page-sacar');
+                if (!withdrawalPage) return;
+
+                const confirmBtn = withdrawalPage.querySelector('.btn-confirm');
+                const amountInput = withdrawalPage.querySelector('.amount-input');
+                const userDocRef = db.collection('users').doc(user.uid);
+
+                confirmBtn.addEventListener('click', async () => {
+                    const amount = parseFloat(amountInput.value);
+                    const MIN_WITHDRAWAL = 3500;
+                    
+                    if (isNaN(amount) || amount < MIN_WITHDRAWAL) {
+                        alert(`O valor mínimo para saque é de ${MIN_WITHDRAWAL.toLocaleString('pt-AO')} Kz.`);
+                        return;
+                    }
+
+                    confirmBtn.disabled = true;
+                    confirmBtn.textContent = 'Processando...';
+
+                    try {
+                        await db.runTransaction(async (transaction) => {
+                            const userDoc = await transaction.get(userDocRef);
+                            if (!userDoc.exists) {
+                                throw new Error("Usuário não encontrado.");
+                            }
+
+                            const userData = userDoc.data();
+                            const availableBalance = userData.saldoSaque || 0;
+
+                            if (availableBalance < amount) {
+                                throw new Error("Saldo de saque insuficiente.");
+                            }
+                            
+                            const newBalance = availableBalance - amount;
+                            const newTotalBalance = (userData.saldoTotal || 0) - amount;
+
+                            transaction.update(userDocRef, {
+                                saldoSaque: newBalance,
+                                saldoTotal: newTotalBalance
+                            });
+                        });
+
+                        const message = `<b>🔔 Pedido de Saque! 🔔</b>\n--------------------------------------\n<b>Usuário:</b> ${user.email}\n<b>Valor Solicitado:</b> ${amount.toLocaleString('pt-AO')} Kz\n--------------------------------------`;
+                        await sendTelegramNotification(message);
+
+                        alert('Seu pedido de saque foi enviado com sucesso e será processado em breve!');
+                        amountInput.value = '';
+
+                    } catch (error) {
+                        console.error("Erro ao processar saque:", error);
+                        alert(`Falha no saque: ${error.message}`);
+                    } finally {
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = 'Confirmar Saque';
+                    }
+                });
+            }
+            
+            function setupRechargeFlow(navigateTo) {
+                const presetButtons = document.querySelectorAll('.preset-btn');
+                const proceedButton = document.getElementById('btn-proceed-to-deposit');
+                const depositValueInput = document.getElementById('deposit-value');
+                presetButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        presetButtons.forEach(btn => btn.classList.remove('selected'));
+                        button.classList.add('selected');
+                        selectedDepositAmount = parseInt(button.dataset.amount);
+                        proceedButton.disabled = false;
+                    });
+                });
+                proceedButton.addEventListener('click', () => {
+                    if (selectedDepositAmount > 0) {
+                        depositValueInput.value = `Kz ${selectedDepositAmount.toLocaleString('pt-AO')}`;
+                        navigateTo('recarregar-deposito');
+                    }
+                });
+                const paymentMethodButtons = document.querySelectorAll('.payment-method-btn');
+                const copyIbanBtn = document.getElementById('btn-copy-iban');
+                function updateBankDetails(bankName) {
+                    const details = bankDetails[bankName];
+                    if (details) {
+                        document.getElementById('deposit-label').textContent = details.label;
+                        document.getElementById('iban-to-copy').textContent = details.value;
+                    }
+                }
+                paymentMethodButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        paymentMethodButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        updateBankDetails(button.dataset.bank);
+                    });
+                });
+                copyIbanBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(document.getElementById('iban-to-copy').textContent).then(() => {
+                        const originalText = copyIbanBtn.textContent; copyIbanBtn.textContent = 'Copiado!';
+                        setTimeout(() => { copyIbanBtn.textContent = originalText; }, 2000);
+                    });
+                });
+                updateBankDetails('BAI');
+            }
+
+            function setupHistoryTabs() {
+                const tabs = document.querySelectorAll('.history-tab');
+                const lists = document.querySelectorAll('.history-list');
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('active')); tab.classList.add('active');
+                        const targetId = tab.dataset.target;
+                        lists.forEach(list => { list.classList.toggle('active', list.id === targetId); });
+                    });
+                });
+            }
+
+            function setupTeamPage() {
+                const copyLinkBtn = document.getElementById('btn-copy-link');
+                const referralLinkDiv = document.getElementById('referral-link');
+                copyLinkBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(referralLinkDiv.textContent).then(() => {
+                        const originalText = copyLinkBtn.textContent; copyLinkBtn.textContent = 'Copiado!';
+                        setTimeout(() => { copyLinkBtn.textContent = originalText; }, 2000);
+                    }).catch(err => { console.error('Erro ao copiar:', err); alert('Não foi possível copiar.'); });
+                });
+            }
+
+            function setupInvestmentButtons(user) {
+                const planosVIP = [
+                    { vipLevel: 1, price: 7500,  cardElement: document.querySelectorAll('.investment-card')[0] },
+                    { vipLevel: 2, price: 33000, cardElement: document.querySelectorAll('.investment-card')[1] },
+                    { vipLevel: 3, price: 89000, cardElement: document.querySelectorAll('.investment-card')[2] },
+                    { vipLevel: 4, price: 210000,cardElement: document.querySelectorAll('.investment-card')[3] },
+                    { vipLevel: 5, price: 470000,cardElement: document.querySelectorAll('.investment-card')[4] },
+                    { vipLevel: 6, price: 990000,cardElement: document.querySelectorAll('.investment-card')[5] },
+                    { vipLevel: 7, price: 2500000,cardElement: document.querySelectorAll('.investment-card')[6] }
+                ];
+                const userDocRef = db.collection('users').doc(user.uid);
+                planosVIP.forEach(plano => {
+                    if (!plano.cardElement) return;
+                    const comprarBtn = plano.cardElement.querySelector('.btn-comprar');
+                    comprarBtn.addEventListener('click', async () => {
+                        if (!confirm(`Você tem certeza que deseja comprar o VIP ${plano.vipLevel} por Kz ${plano.price.toLocaleString('pt-AO')}?`)) return;
+                        try {
+                            await db.runTransaction(async (transaction) => {
+                                const userDoc = await transaction.get(userDocRef);
+                                if (!userDoc.exists) { throw "Usuário não encontrado."; }
+                                const userData = userDoc.data();
+                                if (userData.nivelVip >= plano.vipLevel) { throw `Você já possui um plano VIP igual ou superior.`; }
+                                if (userData.saldoTotal < plano.price) { throw `Saldo insuficiente para comprar o VIP ${plano.vipLevel}.`; }
+                                const novoSaldo = userData.saldoTotal - plano.price;
+                                transaction.update(userDocRef, { 
+                                    saldoTotal: novoSaldo, nivelVip: plano.vipLevel,
+                                    ultimaColetaDeRenda: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                            });
+                            alert(`Parabéns! Você adquiriu o VIP ${plano.vipLevel} com sucesso!`);
+                        } catch (error) {
+                            console.error("Erro na compra do VIP: ", error);
+                            const errorMessage = typeof error === 'string' ? error : 'Ocorreu um erro inesperado.';
+                            alert(`Falha na compra: ${errorMessage}`);
+                        }
+                   });
+                });
+            }
+            
+            function setupTelegramNotification() {
+                const modal = document.getElementById('telegram-notification-modal');
+                const closeModalBtn = document.getElementById('btn-close-telegram-modal');
+                if (closeModalBtn && modal) { closeModalBtn.addEventListener('click', () => modal.classList.remove('active')); }
+            }
+            
+            const authContainer = document.querySelector('.auth-container');
+            const registerLink = document.querySelector('.register-link');
+            const loginLink = document.querySelector('.login-link');
+            registerLink.addEventListener('click', e => { e.preventDefault(); authContainer.classList.add('active'); });
+            loginLink.addEventListener('click', e => { e.preventDefault(); authContainer.classList.remove('active'); });
+            
+            const showMessage = (el, msg, success) => { el.textContent = msg; el.className = success ? 'message success' : 'message error'; el.style.display = 'block'; };
+            const toggleButton = (btn, text, disabled) => { btn.disabled = disabled; btn.textContent = text; };
+            
+            const regForm = document.getElementById('registerForm');
+            regForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const btn = document.getElementById('registerBtn'), msgEl = document.getElementById('registerMessage');
+                toggleButton(btn, 'Processando...', true);
+                const { username, email, password } = regForm;
+                auth.createUserWithEmailAndPassword(email.value, password.value)
+                    .then(cred => {
+                        const userRef = db.collection('users').doc(cred.user.uid);
+                        return userRef.set({
+                            username: username.value, email: email.value, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            saldoTotal: 0, saldoSaque: 0, nivelVip: 0,
+                            ultimaColetaDeRenda: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    })
+                    .catch(err => {
+                        let msg = 'Ocorreu um erro.';
+                        if (err.code === 'auth/email-already-in-use') msg = 'Este e-mail já está em uso.';
+                        else if (err.code === 'auth/weak-password') msg = 'A senha precisa de no mínimo 6 caracteres.';
+                        showMessage(msgEl, msg, false);
+                        toggleButton(btn, 'Cadastrar', false);
+                    });
+            });
+
+            const loginForm = document.getElementById('loginForm');
+            loginForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const btn = document.getElementById('loginBtn'), msgEl = document.getElementById('loginMessage');
+                toggleButton(btn, 'Acessando...', true);
+                const { email, password } = loginForm;
+                auth.signInWithEmailAndPassword(email.value, password.value)
+                    .catch(() => {
+                        showMessage(msgEl, 'E-mail ou senha incorretos.', false);
+                        toggleButton(btn, 'Acessar', false);
+                    });
+            });
+
+            document.getElementById('logout-btn').addEventListener('click', () => auth.signOut());
+
+            function renderHomeChart() {
+                const chartEl = document.querySelector("#home-chart");
+                if (!chartEl || chartEl.innerHTML !== "") return;
+                var options = {
+                    chart: { type: 'area', height: 160, sparkline: { enabled: true }},
+                    stroke: { curve: 'smooth', width: 2 },
+                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1, stops: [0, 90, 100] }},
+                    series: [{ name: 'Portfolio', data: [31, 40, 28, 51, 42, 109, 100] }],
+                    colors: [getComputedStyle(document.documentElement).getPropertyValue('--accent-neon').trim()],
+                    tooltip: { enabled: false }
+                };
+                var chart = new ApexCharts(chartEl, options);
+                chart.render();
+            }
+        });
+    </script>
+</body>
+</html>
